@@ -3,7 +3,6 @@ import json
 import base64
 import json
 import os
-from chat import Chat
 TARGET_IP = "172.16.16.102"
 TARGET_PORT = 8889
 
@@ -144,14 +143,12 @@ class ChatClient:
     def add_group(self, groupname):
         string="addgroup {} {} \r\n".format(self.tokenid, groupname)
         result = self.sendstring(string)
-        if result['status']=='OK':
-            return "Group {} added".format(groupname)
+        return "{}".format(result['message'])
     
     def join_group(self, groupname):
         string="joingroup {} {} \r\n".format(self.tokenid, groupname)
         result = self.sendstring(string)
-        if result['status']=='OK':
-            return "Group {} added".format(groupname)
+        return "{}".format(result['message'])
 
     def send_message(self,usernameto="xxx",message="xxx"):
         if (self.tokenid==""):
@@ -308,10 +305,8 @@ class ChatClient:
 
 if __name__=="__main__":
     cc = ChatClient()
-    c = Chat()
     while True:
         print("\n")
-        print("List User: " + str(c.users.keys()) + " dan Passwordnya: " + str(c.users['messi']['password']) + ", " + str(c.users['henderson']['password']) + ", " + str(c.users['lineker']['password']))
         print("""Command:\n
         Inter-Realm Command\n
         1. Login: auth [username] [password]
@@ -321,7 +316,7 @@ if __name__=="__main__":
         5. Mengirim pesan: send [username to] [message]
         6. Mengirim file: sendfile [username to] [filename]
         7. Mengirim pesan ke group: sendgroup [nama_group] [message]
-        8. Mengirim file ke group: sendgroupfile [usernames to] [filename]
+        8. Mengirim file ke group: sendgroupfile [nama_group] [filename]
         9. Melihat pesan: inbox
         10. Logout: logout
         11. Melihat user yang aktif: info
@@ -331,7 +326,7 @@ if __name__=="__main__":
         2. Mengirim pesan ke realm: sendprivaterealm [name_realm] [username to] [message]
         3. Mengirim file ke realm: sendfilerealm [name_realm] [username to] [filename]
         4. Mengirim pesan ke group realm: sendgrouprealm [name_realm] [nama_group] [message]
-        5. Mengirim file ke group realm: sendgroupfilerealm [name_realm] [usernames to] [filename]
+        5. Mengirim file ke group realm: sendgroupfilerealm [name_realm] [nama_group] [filename]
         6. Melihat pesan dari realm: getrealminbox [nama_realm]""")
         cmdline = input("Command {}:" . format(cc.tokenid))
         print(cc.proses(cmdline))
