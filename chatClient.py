@@ -3,7 +3,7 @@ import json
 import base64
 import json
 import os
-TARGET_IP = "172.16.16.102"
+TARGET_IP = "172.16.16.101"
 TARGET_PORT = 8889
 
 class ChatClient:
@@ -90,6 +90,8 @@ class ChatClient:
                 return self.logout()
             elif (command=='info'):
                 return self.info()
+            elif (command=='getusers'):
+                return self.getusers()
             else:
                 return "*Maaf, command tidak benar"
         except IndexError:
@@ -116,7 +118,7 @@ class ChatClient:
         result = self.sendstring(string)
         if result['status']=='OK':
             self.tokenid=result['tokenid']
-            return "username {} logged in, token {} " .format(username,self.tokenid)
+            return "OK | {} | {} " .format(username,self.tokenid)
         else:
             return "Error, {}" . format(result['message'])
     
@@ -126,7 +128,14 @@ class ChatClient:
         result = self.sendstring(string)
         if result['status']=='OK':
             self.tokenid=result['tokenid']
-            return "username {} register in, token {} " .format(username,self.tokenid)
+            return " {} {} " .format(username,self.tokenid)
+        else:
+            return "Error, {}" . format(result['message'])
+
+    def getusers(self):
+        result = self.sendstring("getusers \r\n")
+        if result['status']=='OK':
+            return result['users']
         else:
             return "Error, {}" . format(result['message'])
 
@@ -328,5 +337,6 @@ if __name__=="__main__":
         4. Mengirim pesan ke group realm: sendgrouprealm [name_realm] [nama_group] [message]
         5. Mengirim file ke group realm: sendgroupfilerealm [name_realm] [nama_group] [filename]
         6. Melihat pesan dari realm: getrealminbox [nama_realm]""")
+        
         cmdline = input("Command {}:" . format(cc.tokenid))
         print(cc.proses(cmdline))

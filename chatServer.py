@@ -70,7 +70,11 @@ class Chat:
                 nama = ' '.join(j[4:]).strip()
                 logging.warning("REGISTER: register {} {}" . format(username,password))
                 return self.register_user(username,password, negara, nama)
-            
+
+            elif command == 'getusers':
+                logging.warning("GETUSERS: retrieving all users")
+                return self.get_all_users()
+                
 #   ===================== Komunikasi dalam satu server =====================            
             elif (command=='addgroup'):
                 sessionid = j[1].strip()
@@ -264,6 +268,30 @@ class Chat:
             return False
         return self.users[username]
 
+    def get_all_users(self):
+        try:
+            user_list = []
+            for username in self.users:
+                user_list.append({
+                    'username': username,
+                })
+            return {'status': 'OK', 'users': user_list}
+        except Exception as e:
+            logging.error(f"Error getting users: {e}")
+            return {'status': 'ERROR', 'message': 'Failed to retrieve users'}
+
+    def get_all_groups(self):
+        try:
+            groups_list = []
+            for group in self.groups:
+                groups_list.append({
+                    'group': group
+                })
+                return {'status': 'OK', 'groups': groups_list}
+        except Exception as e:
+            logging.error(f"Error getting users: {e}")
+            return {'status': 'ERROR', 'message': 'Failed to retrieve users'}
+            
 #   ===================== Komunikasi dalam satu server =====================
     def addgroup(self, sessionid, usernamefrom, groupname):
         if (sessionid not in self.sessions):
@@ -276,7 +304,7 @@ class Chat:
             }
             return {'status': 'OK', 'message': 'Add group successful'}
         else:
-            return {'status': 'ERROR', 'message': 'Group tidak ditemukan!'}
+            return {'status': 'ERROR', 'message': 'Group sudah ada!'}
     
     def joingroup(self, sessionid, usernamefrom, groupname):
         if (sessionid not in self.sessions):
