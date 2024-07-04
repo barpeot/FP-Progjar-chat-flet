@@ -8,6 +8,11 @@ TARGET_IP = os.getenv("SERVER_IP") or "172.16.16.101"
 TARGET_PORT = os.getenv("SERVER_PORT") or "8889"
 ON_WEB = os.getenv("ONWEB") or "0"
 
+class Message():
+    # nonlocal user_logged_in
+    def __init__(self, user: str, text: str):
+        self.user = user
+        self.text = text
 
 def main(page: ft.Page):
     cc = ChatClient()
@@ -102,7 +107,7 @@ def main(page: ft.Page):
                         content=ft.Row(
                             [
                                 ft.Icon(name=ft.icons.GROUPS), 
-                                ft.Text("View Group Chat"),
+                                ft.Text("Group Chat"),
                             ],
                             alignment=ft.MainAxisAlignment.START,
                         ),
@@ -112,7 +117,7 @@ def main(page: ft.Page):
                         height=48,
                         border_radius=10,
                         ink=True,
-                        on_click=lambda e: print("Clickable with Ink clicked!"),
+                        on_click=show_groups,
                     ),
                     ft.Container(
                         content=ft.Row(
@@ -130,6 +135,22 @@ def main(page: ft.Page):
                         ink=True,
                         on_click=show_add_groups,
                     ),
+                    ft.Container(
+                        content=ft.Row(
+                            [
+                                ft.Icon(name=ft.icons.GROUPS), 
+                                ft.Text("Join Group Chat"),
+                            ],
+                            alignment=ft.MainAxisAlignment.START,
+                        ),
+                        alignment=ft.alignment.center,
+                        bgcolor=ft.colors.CYAN_200,
+                        width=page.width,
+                        height=48,
+                        border_radius=10,
+                        ink=True,
+                        on_click=show_join_groups,
+                    ),
                     ft.ElevatedButton(text="Logout", on_click=logout)
                 ]
             )
@@ -141,22 +162,28 @@ def main(page: ft.Page):
         user_containers = []
         
         for user in users:
-            if user['username'] != user_logged_in:
+            username = user['username']
+            if user_logged_in.strip() != username:
                 user_containers.append(
                     ft.Container(
-                        content=ft.Text(user['username']),
+                        content=ft.Row([
+                            ft.Icon(name=ft.icons.PERSON),
+                            ft.Text(user['username']),
+                        ]),
                         alignment=ft.Alignment(-0.95, 0.0),
                         bgcolor=ft.colors.CYAN_200,
                         width=page.width,
                         height=48,
                         border_radius=10,
                         ink=True,
-                        on_click=lambda e: print("Clickable with Ink clicked!"),
-                    ),
+                        on_click=lambda e, username=username: show_chat(username),
+                    )
                 )
 
         page.clean()
         page.add(
+            ft.Text(value="Pilih User", size=32),
+            ft.Text(value="", ref=output),
             ft.Column(
                 controls=user_containers
             ),
@@ -165,7 +192,95 @@ def main(page: ft.Page):
         page.update()
 
     def show_groups(e=None):
-        return True
+        groups = cc.getgroups()
+        grouplist = groups['groups']
+        group_containers = []
+
+        for group in grouplist:
+            group_name = group['group']
+            members = group['members']
+
+            group_text = f"{group_name}\nAnggota Group: {', '.join(members)}"
+            
+            if user_logged_in.strip() in members:
+                group_containers.append(
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(name=ft.icons.GROUPS),
+                            ft.Text(group_text),
+                        ]),
+                        alignment=ft.Alignment(-0.95, 0.0),
+                        bgcolor=ft.colors.CYAN_200,
+                        width=page.width,
+                        height=64,
+                        border_radius=10,
+                        ink=True,
+                        on_click=lambda e: print("Clickable with Ink clicked!"),
+                    ),
+                )    
+            
+
+        page.clean()
+        if group_containers:
+            page.add(
+                ft.Text(value="Pilih Group", size=32),
+                ft.Text(value="", ref=output),
+                ft.Column(controls=group_containers),
+                ft.ElevatedButton(text="Kembali", on_click=show_main)
+            )
+        else:
+            page.add(
+                ft.Text(value="Pilih Group", size=32),
+                ft.Text(value="", ref=output),
+                ft.Text(value="Tidak ada group yang kamu join!"),
+                ft.ElevatedButton(text="Kembali", on_click=show_main)
+            )
+        page.update()
+
+    def show_join_groups(e=None):
+        groups = cc.getgroups()
+        grouplist = groups['groups']
+        group_containers = []
+
+        for group in grouplist:
+            group_name = group['group']
+            members = group['members']
+
+            if user_logged_in.strip() not in members:
+                group_text = f"{group_name}\nAnggota Group: {', '.join(members)}"
+                
+                group_containers.append(
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(name=ft.icons.GROUPS),
+                            ft.Text(group_text),
+                        ]),
+                        alignment=ft.Alignment(-0.95, 0.0),
+                        bgcolor=ft.colors.CYAN_200,
+                        width=page.width,
+                        height=64,
+                        border_radius=10,
+                        ink=True,
+                        on_click=lambda e: print("Clickable with Ink clicked!"),
+                    ),
+                )
+    
+        page.clean()
+        if group_containers:
+            page.add(
+                ft.Text(value="Pilih Group", size=32),
+                ft.Text(value="", ref=output),
+                ft.Column(controls=group_containers),
+                ft.ElevatedButton(text="Kembali", on_click=show_main)
+            )
+        else:
+            page.add(
+                ft.Text(value="Pilih Group", size=32),
+                ft.Text(value="", ref=output),
+                ft.Text(value="Tidak ada group yang dapat kamu join!"),
+                ft.ElevatedButton(text="Kembali", on_click=show_main)
+            )
+        page.update()
 
     def show_add_groups(e=None):
         page.clean()
@@ -188,8 +303,152 @@ def main(page: ft.Page):
         )
         page.update()
         
-    def show_chat(e=None):
-        return True
+    def show_chat(username):
+        # Chat messages
+        chat = ft.ListView(
+            spacing=10,
+            auto_scroll=True,
+            height=page.height - 200,
+        )
+    
+        # A new message entry form
+        new_message = ft.TextField(
+            hint_text="Write a message...",
+            autofocus=True,
+            shift_enter=True,
+            min_lines=1,
+            max_lines=5,
+            filled=True,
+            expand=True,
+            #on_submit=send_message_click,
+        )
+
+        def popupFile(e=None): 
+            dialog = ft.AlertDialog(
+                open=True,
+                modal=True,
+                title=ft.Text("Input File Path"),
+                content=ft.Column(
+                    [ft.TextField(label="Filepath", ref=filepath_input)], 
+                    tight=True
+                ),
+                actions=[
+                    ft.ElevatedButton(text="Cancel", on_click=lambda e: close_dialog(dialog)),
+                    ft.ElevatedButton(text="Send File", on_click=lambda e: send_file( username, filepath_input, dialog))
+                ],
+                actions_alignment="end",
+            )
+            page.overlay.append(dialog)
+            page.update()
+            
+        def close_dialog(dialog):
+            dialog.open = False
+            page.update()
+
+        def inbox(username):
+            user=username
+            rcvmsg = cc.proses("privateinbox {}" .format(user))
+            data = json.loads(rcvmsg)
+
+            # # Extract the messages
+            
+            # messages = []
+            # files = []
+            for key in data:
+                for item in data[key]:
+                    if 'msg' in item:
+                        new_message_widget = ft.Text("{} : {}".format(user, item['msg']))
+                        chat.controls.append(new_message_widget)
+                    elif 'file_name' in item:
+                        new_item_widget = ft.Text("{} : Received {}".format(user, item['file_name']))
+                        chat.controls.append(new_message_widget)
+                        
+                    
+            
+            # # Print the messages
+            # for msg in messages:
+            #     print(msg)
+            #     new_message_widget = ft.Text("{} : {}".format(user, msg))
+            #     chat.controls.append(new_message_widget)
+
+            chat.update()
+            page.update()
+        
+        # Function to handle send button click
+        def send_click(e):
+            nonlocal user_logged_in
+            # Get the message text
+            message_text = new_message.value
+            if message_text:
+                # Create a new Text widget for the message
+                new_message_widget = ft.Text("{} : {}".format(user_logged_in, message_text))
+                cc.proses("send {} {}".format(username, message_text))
+                # Append the new message to the ListView
+                chat.controls.append(new_message_widget)
+                
+                # Clear the text field
+                new_message.value = ""
+                
+                # Update the ListView and page
+                chat.update()
+                page.update()
+
+        def send_file(username, filepath, dialog):
+            print(username)
+            print(filepath.current.value)
+            file=filepath.current.value
+            rcvmsg = cc.proses("sendfile {} {}" .format(username, file))
+            print(rcvmsg)
+            close_dialog(dialog)
+    
+        page.clean()
+    
+        # Add everything to the page
+        page.add(
+            ft.Column(
+                [
+                    ft.Row(
+                        [
+                            ft.IconButton(
+                                icon=ft.icons.ARROW_BACK,
+                                tooltip="Back",
+                                on_click=show_chat_list,
+                            ),
+                            ft.Text(f"Chat with {username}", size=32),
+                        ],
+                    ),
+                    ft.Container(
+                        content=chat,
+                        border=ft.border.all(1, ft.colors.OUTLINE),
+                        border_radius=5,
+                        padding=10,
+                    ),
+                    ft.Row(
+                        [
+                            new_message,
+                            ft.IconButton(
+                                icon=ft.icons.SEND_ROUNDED,
+                                tooltip="Send message",
+                                on_click=send_click,
+                            ),
+                            ft.IconButton(
+                                icon=ft.icons.INBOX,
+                                tooltip="Receive message",
+                                on_click=lambda e, username=username: inbox(username.strip()),
+                            ),
+                            ft.IconButton(
+                                icon=ft.icons.ATTACH_FILE_ROUNDED,
+                                tooltip="Send file",
+                                on_click=popupFile,
+                            ),
+                        ]
+                    ),
+                ]
+            )
+        )
+    
+        page.update()
+        
 
     def on_login(e):
         nonlocal user_logged_in, token
@@ -239,7 +498,15 @@ def main(page: ft.Page):
                 output.current.update()
         else:
             output.current.value="Tolong isi nama group"
-            output.current.update() 
+            output.current.update()
+
+    def on_show_private_chat(username):
+        nonlocal user_logged_in
+        if username.strip().lower() == user_logged_in.strip().lower():
+            output.current.value="Tidak bisa chat dengan diri sendiri!"
+            output.current.update()
+        else:
+            print(f"Clicked on user: {user_logged_in} {username}")
     
     def logout(e):
         nonlocal user_logged_in, token

@@ -83,6 +83,10 @@ class ChatClient:
                 return self.send_group_file_realm(realmid, usernamesto,filepath)
             elif (command=='inbox'):
                 return self.inbox()
+            elif (command=='privateinbox'):
+                username=""
+                username = j[1].strip()
+                return self.privateinbox(username)
             elif (command == 'getrealminbox'):
                 realmid = j[1].strip()
                 return self.realm_inbox(realmid)
@@ -92,6 +96,8 @@ class ChatClient:
                 return self.info()
             elif (command=='getusers'):
                 return self.getusers()
+            elif (command=='getgroups'):
+                return self.getgroups()
             else:
                 return "*Maaf, command tidak benar"
         except IndexError:
@@ -136,6 +142,13 @@ class ChatClient:
         result = self.sendstring("getusers \r\n")
         if result['status']=='OK':
             return result['users']
+        else:
+            return "Error, {}" . format(result['message'])
+
+    def getgroups(self):
+        result = self.sendstring("getgroups \r\n")
+        if result['status']=='OK':
+            return result
         else:
             return "Error, {}" . format(result['message'])
 
@@ -272,6 +285,16 @@ class ChatClient:
             return "file sent to group {} in realm {}" .format(usernames_to, realmid)
         else:
             return "Error {}".format(result['message'])
+
+    def privateinbox(self, username):
+        if (self.tokenid==""):
+            return "Error, not authorized"
+        string="privateinbox {} {} \r\n" . format(self.tokenid, username)
+        result = self.sendstring(string)
+        if result['status']=='OK':
+            return "{}" . format(json.dumps(result['messages']))
+        else:
+            return "Error, {}" . format(result['message'])
 
     def inbox(self):
         if (self.tokenid==""):

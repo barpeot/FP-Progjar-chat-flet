@@ -74,6 +74,10 @@ class Chat:
             elif command == 'getusers':
                 logging.warning("GETUSERS: retrieving all users")
                 return self.get_all_users()
+
+            elif command == 'getgroups':
+                logging.warning("GETGROUPS: retrieving all groups")
+                return self.get_all_groups()
                 
 #   ===================== Komunikasi dalam satu server =====================            
             elif (command=='addgroup'):
@@ -111,6 +115,13 @@ class Chat:
                 username = self.sessions[sessionid]['username']
                 logging.warning("INBOX: {}" . format(sessionid))
                 return self.get_inbox(username)
+            elif (command=='privateinbox'):
+                sessionid = j[1].strip()
+                usernamefrom = ""
+                usernamefrom = j[2].strip()
+                username = self.sessions[sessionid]['username']
+                logging.warning("INBOX: {} {}" . format(sessionid, usernamefrom))
+                return self.get_privateinbox(username, usernamefrom)
             elif (command=='sendfile'):
                 sessionid = j[1].strip()
                 usernameto = j[2].strip()
@@ -283,11 +294,12 @@ class Chat:
     def get_all_groups(self):
         try:
             groups_list = []
-            for group in self.groups:
+            for groupname, group in self.group.items():
                 groups_list.append({
-                    'group': group
+                    'group': groupname,
+                    'members': group['members']
                 })
-                return {'status': 'OK', 'groups': groups_list}
+            return {'status': 'OK', 'groups': groups_list}
         except Exception as e:
             logging.error(f"Error getting users: {e}")
             return {'status': 'ERROR', 'message': 'Failed to retrieve users'}
@@ -369,14 +381,24 @@ class Chat:
                 inqueue_receiver[username_from].put(message)
         return {'status': 'OK', 'message': 'Message Sent'}
     
-    def get_inbox(self,username):
+    def get_inbox(self, username):
         s_fr = self.get_user(username)
         incoming = s_fr['incoming']
-        msgs={}
-        for users in incoming:
-            msgs[users]=[]
-            while not incoming[users].empty():
-                msgs[users].append(s_fr['incoming'][users].get_nowait())
+        msgs = {}
+        for user in incoming:
+            msgs[user] = []
+            while not incoming[user].empty():
+                msgs[user].append(s_fr['incoming'][user].get_nowait())
+        return {'status': 'OK', 'messages': msgs}
+    
+    def get_privateinbox(self, username, usernamefrom=None):
+        s_fr = self.get_user(username)
+        incoming = s_fr['incoming']
+        msgs = {}
+        if usernamefrom in incoming:
+            msgs[usernamefrom] = []
+            while not incoming[usernamefrom].empty():
+                msgs[usernamefrom].append(s_fr['incoming'][usernamefrom].get_nowait())
         return {'status': 'OK', 'messages': msgs}
 
     def send_file(self, sessionid, username_from, username_dest, filepath ,encoded_file):
