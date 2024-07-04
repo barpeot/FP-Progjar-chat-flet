@@ -410,28 +410,7 @@ class Chat:
 
         if s_fr is False or s_to is False:
             return {'status': 'ERROR', 'message': 'User Tidak Ditemukan'}
-
         filename = os.path.basename(filepath)
-        message = {
-            'msg_from': s_fr['nama'],
-            'msg_to': s_to['nama'],
-            'file_name': filename,
-            'file_content': encoded_file
-        }
-
-        outqueue_sender = s_fr['outgoing']
-        inqueue_receiver = s_to['incoming']
-        try:
-            outqueue_sender[username_from].put(json.dumps(message))
-        except KeyError:
-            outqueue_sender[username_from] = Queue()
-            outqueue_sender[username_from].put(json.dumps(message))
-        try:
-            inqueue_receiver[username_from].put(json.dumps(message))
-        except KeyError:
-            inqueue_receiver[username_from] = Queue()
-            inqueue_receiver[username_from].put(json.dumps(message))
-        
         # Simpan file ke folder dengan nama yang mencerminkan waktu pengiriman dan nama asli file
         now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         folder_name = f"{now}_{username_from}_{username_dest}_{filename}"
@@ -440,6 +419,46 @@ class Chat:
         folder_path = join(folder_path, folder_name)
         os.makedirs(folder_path, exist_ok=True)
         file_destination = os.path.join(folder_path, filename)
+
+        
+        message = {
+            'msg_from': s_fr['nama'],
+            'msg_to': s_to['nama'],
+            'file_name': filename,
+            'file_content': encoded_file,
+            'address' : file_destination
+        }
+
+        outqueue_sender = s_fr['outgoing']
+        inqueue_receiver = s_to['incoming']
+        # try:
+        #     outqueue_sender[username_from].put(json.dumps(message))
+        # except KeyError:
+        #     outqueue_sender[username_from] = Queue()
+        #     outqueue_sender[username_from].put(json.dumps(message))
+        # try:
+        #     inqueue_receiver[username_from].put(json.dumps(message))
+        # except KeyError:
+        #     inqueue_receiver[username_from] = Queue()
+        #     inqueue_receiver[username_from].put(json.dumps(message))
+        try:
+            outqueue_sender[username_from].put(message)
+        except KeyError:
+            outqueue_sender[username_from] = Queue()
+            outqueue_sender[username_from].put(message)
+        try:
+            inqueue_receiver[username_from].put(message)
+        except KeyError:
+            inqueue_receiver[username_from] = Queue()
+            inqueue_receiver[username_from].put(message)
+      
+        folder_name = f"{now}_{username_from}_{username_dest}_{filename}"
+        folder_path = join(dirname(realpath(__file__)), 'files/')
+        os.makedirs(folder_path, exist_ok=True)
+        folder_path = join(folder_path, folder_name)
+        os.makedirs(folder_path, exist_ok=True)
+        file_destination = os.path.join(folder_path, filename)
+        
         if 'b' in encoded_file[0]:
             msg = encoded_file[2:-1]
 

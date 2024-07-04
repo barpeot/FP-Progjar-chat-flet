@@ -360,8 +360,19 @@ def main(page: ft.Page):
                         new_message_widget = ft.Text("{} : {}".format(user, item['msg']))
                         chat.controls.append(new_message_widget)
                     elif 'file_name' in item:
-                        new_item_widget = ft.Text("{} : Received {}".format(user, item['file_name']))
-                        chat.controls.append(new_message_widget)
+                        new_item_widget = ft.Text("{} : sent {}".format(user, item['file_name']))
+                        chat.controls.append(new_item_widget)
+                        try:
+                            image_bytes = item['file_content']
+                            image = ft.Image(
+                                src=item['address'],
+                                width=100,
+                                height=100,
+                                fit=ft.ImageFit.CONTAIN,
+                            )
+                            chat.controls.append(image)
+                        except Exception as e:
+                            print(f"Error decoding file content: {e}")
                         
                     
             
@@ -400,6 +411,10 @@ def main(page: ft.Page):
             rcvmsg = cc.proses("sendfile {} {}" .format(username, file))
             print(rcvmsg)
             close_dialog(dialog)
+            new_message_widget = ft.Text("{} : sent {}".format(user_logged_in, file))
+            chat.controls.append(new_message_widget)
+            chat.update()
+            page.update()
     
         page.clean()
     
