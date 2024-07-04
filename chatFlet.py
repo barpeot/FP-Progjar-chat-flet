@@ -168,7 +168,7 @@ def main(page: ft.Page):
                     ft.Container(
                         content=ft.Row([
                             ft.Icon(name=ft.icons.PERSON),
-                            ft.Text(user['username']),
+                            ft.Text(user['username'])
                         ]),
                         alignment=ft.Alignment(-0.95, 0.0),
                         bgcolor=ft.colors.CYAN_200,
@@ -215,7 +215,7 @@ def main(page: ft.Page):
                         height=64,
                         border_radius=10,
                         ink=True,
-                        on_click=lambda e: print("Clickable with Ink clicked!"),
+                        on_click=lambda e, group_name=group_name: show_chat_group(group_name),
                     ),
                 )    
             
@@ -261,7 +261,7 @@ def main(page: ft.Page):
                         height=64,
                         border_radius=10,
                         ink=True,
-                        on_click=lambda e: print("Clickable with Ink clicked!"),
+                        on_click=lambda e, group_name=group_name: on_join_group(group_name),
                     ),
                 )
     
@@ -360,8 +360,19 @@ def main(page: ft.Page):
                         new_message_widget = ft.Text("{} : {}".format(user, item['msg']))
                         chat.controls.append(new_message_widget)
                     elif 'file_name' in item:
-                        new_item_widget = ft.Text("{} : Received {}".format(user, item['file_name']))
-                        chat.controls.append(new_message_widget)
+                        new_item_widget = ft.Text("{} : sent {}".format(user, item['file_name']))
+                        chat.controls.append(new_item_widget)
+                        try:
+                            image_bytes = item['file_content']
+                            image = ft.Image(
+                                src=item['address'],
+                                width=100,
+                                height=100,
+                                fit=ft.ImageFit.CONTAIN,
+                            )
+                            chat.controls.append(image)
+                        except Exception as e:
+                            print(f"Error decoding file content: {e}")
                         
                     
             
@@ -400,6 +411,25 @@ def main(page: ft.Page):
             rcvmsg = cc.proses("sendfile {} {}" .format(username, file))
             print(rcvmsg)
             close_dialog(dialog)
+            new_message_widget = ft.Text("{} : sent {}".format(user_logged_in, file))
+            chat.controls.append(new_message_widget)
+            
+            filepath = rcvmsg
+            
+            
+            try:
+                image = ft.Image(
+                    src=filepath,
+                    width=100,
+                    height=100,
+                    fit=ft.ImageFit.CONTAIN,
+                )
+                chat.controls.append(image)
+            except Exception as e:
+                print(f"Error decoding file content: {e}")
+            
+            chat.update()
+            page.update()
     
         page.clean()
     
@@ -448,8 +478,168 @@ def main(page: ft.Page):
         )
     
         page.update()
-        
 
+    def show_chat_group(group_name):
+        # Chat messages
+        chat = ft.ListView(
+            spacing=10,
+            auto_scroll=True,
+            height=page.height - 200,
+        )
+    
+        # A new message entry form
+        new_message = ft.TextField(
+            hint_text="Write a message...",
+            autofocus=True,
+            shift_enter=True,
+            min_lines=1,
+            max_lines=5,
+            filled=True,
+            expand=True,
+            #on_submit=send_message_click,
+        )
+
+        def popupFile(e=None): 
+            dialog = ft.AlertDialog(
+                open=True,
+                modal=True,
+                title=ft.Text("Input File Path"),
+                content=ft.Column(
+                    [ft.TextField(label="Filepath", ref=filepath_input)], 
+                    tight=True
+                ),
+                actions=[
+                    ft.ElevatedButton(text="Cancel", on_click=lambda e: close_dialog(dialog)),
+                    ft.ElevatedButton(text="Send File", on_click=lambda e: send_file( group_name, filepath_input, dialog))
+                ],
+                actions_alignment="end",
+            )
+            page.overlay.append(dialog)
+            page.update()
+            
+        def close_dialog(dialog):
+            dialog.open = False
+            page.update()
+
+        def inbox(group_name):
+            user=group_name
+            rcvmsg = cc.proses("inbox {}" .format(user))
+            data = json.loads(rcvmsg)
+
+            # # Extract the messages
+            
+            # messages = []
+            # files = []
+            for key in data:
+                for item in data[key]:
+                    if 'msg' in item:
+                        new_message_widget = ft.Text("{} : {}".format(user, item['msg']))
+                        chat.controls.append(new_message_widget)
+                    elif 'file_name' in item:
+                        new_item_widget = ft.Text("{} : sent {}".format(user, item['file_name']))
+                        chat.controls.append(new_item_widget)
+                        try:
+                            image_bytes = item['file_content']
+                            image = ft.Image(
+                                src=item['address'],
+                                width=100,
+                                height=100,
+                                fit=ft.ImageFit.CONTAIN,
+                            )
+                            chat.controls.append(image)
+                        except Exception as e:
+                            print(f"Error decoding file content: {e}")
+                        
+                    
+            
+            # # Print the messages
+            # for msg in messages:
+            #     print(msg)
+            #     new_message_widget = ft.Text("{} : {}".format(user, msg))
+            #     chat.controls.append(new_message_widget)
+
+            chat.update()
+            page.update()
+        
+        # Function to handle send button click
+        def send_click(e):
+            nonlocal user_logged_in
+            # Get the message text
+            message_text = new_message.value
+            if message_text:
+                # Create a new Text widget for the message
+                new_message_widget = ft.Text("{} : {}".format(user_logged_in, message_text))
+                cc.proses("sendgroup {} {}".format(group_name, message_text))
+                # Append the new message to the ListView
+                chat.controls.append(new_message_widget)
+                
+                # Clear the text field
+                new_message.value = ""
+                
+                # Update the ListView and page
+                chat.update()
+                page.update()
+
+        def send_file(group_name, filepath, dialog):
+            print(group_name)
+            print(filepath.current.value)
+            file=filepath.current.value
+            rcvmsg = cc.proses("sendgroupfile {} {}" .format(group_name, file))
+            print(rcvmsg)
+            close_dialog(dialog)
+            new_message_widget = ft.Text("{} : sent {}".format(user_logged_in, file))
+            chat.controls.append(new_message_widget)
+            chat.update()
+            page.update()
+    
+        page.clean()
+    
+        # Add everything to the page
+        page.add(
+            ft.Column(
+                [
+                    ft.Row(
+                        [
+                            ft.IconButton(
+                                icon=ft.icons.ARROW_BACK,
+                                tooltip="Back",
+                                on_click=show_groups,
+                            ),
+                            ft.Text(f"Chat with {group_name}", size=32),
+                        ],
+                    ),
+                    ft.Container(
+                        content=chat,
+                        border=ft.border.all(1, ft.colors.OUTLINE),
+                        border_radius=5,
+                        padding=10,
+                    ),
+                    ft.Row(
+                        [
+                            new_message,
+                            ft.IconButton(
+                                icon=ft.icons.SEND_ROUNDED,
+                                tooltip="Send message",
+                                on_click=send_click,
+                            ),
+                            ft.IconButton(
+                                icon=ft.icons.INBOX,
+                                tooltip="Receive message",
+                                on_click=lambda e, group_name=group_name: inbox(group_name.strip()),
+                            ),
+                            ft.IconButton(
+                                icon=ft.icons.ATTACH_FILE_ROUNDED,
+                                tooltip="Send file",
+                                on_click=popupFile,
+                            ),
+                        ]
+                    ),
+                ]
+            )
+        )
+    
+        page.update()
+    
     def on_login(e):
         nonlocal user_logged_in, token
         username=username_input.current.value
@@ -499,7 +689,12 @@ def main(page: ft.Page):
         else:
             output.current.value="Tolong isi nama group"
             output.current.update()
-
+            
+    def on_join_group(group_name):
+        cc.proses("joingroup {}".format(group_name))
+        show_main()
+        output.current.value="Berhasil Join {}".format(group_name) 
+        output.current.update()
     def on_show_private_chat(username):
         nonlocal user_logged_in
         if username.strip().lower() == user_logged_in.strip().lower():

@@ -109,7 +109,7 @@ class ChatClient:
             receivemsg = ""
             while True:
                 data = self.sock.recv(1024)
-                print("diterima dari server",data)
+                # print("diterima dari server",data)
                 if (data):
                     receivemsg = "{}{}" . format(receivemsg,data.decode())  #data harus didecode agar dapat di operasikan dalam bentuk string
                     if receivemsg[-4:]=='\r\n\r\n':
@@ -197,7 +197,7 @@ class ChatClient:
 
         result = self.sendstring(string)
         if result['status']=='OK':
-            return "file sent to {}" . format(usernameto)
+            return "{}" . format(result['address'])
         else:
             return "Error, {}" . format(result['message'])
 

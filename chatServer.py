@@ -122,6 +122,13 @@ class Chat:
                 username = self.sessions[sessionid]['username']
                 logging.warning("INBOX: {} {}" . format(sessionid, usernamefrom))
                 return self.get_privateinbox(username, usernamefrom)
+            elif (command=='groupinbox'):
+                sessionid = j[1].strip()
+                usernamefrom = ""
+                usernamefrom = j[2].strip()
+                group_name = self.sessions[sessionid]['group_name']
+                logging.warning("INBOX: {} {}" . format(sessionid, usernamefrom))
+                return self.get_groupinbox(group_name, usernamefrom)
             elif (command=='sendfile'):
                 sessionid = j[1].strip()
                 usernameto = j[2].strip()
@@ -274,6 +281,11 @@ class Chat:
         self.sessions[tokenid]={ 'username': username, 'userdetail':self.users[username]}
         return { 'status': 'OK', 'tokenid': tokenid }
 
+    def get_group(self, group_name):
+        if (group_name not in self.group):
+            return False
+        return self.group[group_name]
+    
     def get_user(self,username):
         if (username not in self.users):
             return False
@@ -401,6 +413,16 @@ class Chat:
                 msgs[usernamefrom].append(s_fr['incoming'][usernamefrom].get_nowait())
         return {'status': 'OK', 'messages': msgs}
 
+    def get_groupinbox(self, group_name, usernamefrom=None):
+        s_fr = self.get_user(group_name)
+        incoming = s_fr['incoming']
+        msgs = {}
+        if usernamefrom in incoming:
+            msgs[usernamefrom] = []
+            while not incoming[usernamefrom].empty():
+                msgs[usernamefrom].append(s_fr['incoming'][usernamefrom].get_nowait())
+        return {'status': 'OK', 'messages': msgs}
+
     def send_file(self, sessionid, username_from, username_dest, filepath ,encoded_file):
         if sessionid not in self.sessions:
             return {'status': 'ERROR', 'message': 'Session Tidak Ditemukan'}
@@ -410,28 +432,7 @@ class Chat:
 
         if s_fr is False or s_to is False:
             return {'status': 'ERROR', 'message': 'User Tidak Ditemukan'}
-
         filename = os.path.basename(filepath)
-        message = {
-            'msg_from': s_fr['nama'],
-            'msg_to': s_to['nama'],
-            'file_name': filename,
-            'file_content': encoded_file
-        }
-
-        outqueue_sender = s_fr['outgoing']
-        inqueue_receiver = s_to['incoming']
-        try:
-            outqueue_sender[username_from].put(json.dumps(message))
-        except KeyError:
-            outqueue_sender[username_from] = Queue()
-            outqueue_sender[username_from].put(json.dumps(message))
-        try:
-            inqueue_receiver[username_from].put(json.dumps(message))
-        except KeyError:
-            inqueue_receiver[username_from] = Queue()
-            inqueue_receiver[username_from].put(json.dumps(message))
-        
         # Simpan file ke folder dengan nama yang mencerminkan waktu pengiriman dan nama asli file
         now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         folder_name = f"{now}_{username_from}_{username_dest}_{filename}"
@@ -440,6 +441,46 @@ class Chat:
         folder_path = join(folder_path, folder_name)
         os.makedirs(folder_path, exist_ok=True)
         file_destination = os.path.join(folder_path, filename)
+
+        
+        message = {
+            'msg_from': s_fr['nama'],
+            'msg_to': s_to['nama'],
+            'file_name': filename,
+            'file_content': encoded_file,
+            'address' : file_destination
+        }
+
+        outqueue_sender = s_fr['outgoing']
+        inqueue_receiver = s_to['incoming']
+        # try:
+        #     outqueue_sender[username_from].put(json.dumps(message))
+        # except KeyError:
+        #     outqueue_sender[username_from] = Queue()
+        #     outqueue_sender[username_from].put(json.dumps(message))
+        # try:
+        #     inqueue_receiver[username_from].put(json.dumps(message))
+        # except KeyError:
+        #     inqueue_receiver[username_from] = Queue()
+        #     inqueue_receiver[username_from].put(json.dumps(message))
+        try:
+            outqueue_sender[username_from].put(message)
+        except KeyError:
+            outqueue_sender[username_from] = Queue()
+            outqueue_sender[username_from].put(message)
+        try:
+            inqueue_receiver[username_from].put(message)
+        except KeyError:
+            inqueue_receiver[username_from] = Queue()
+            inqueue_receiver[username_from].put(message)
+      
+        folder_name = f"{now}_{username_from}_{username_dest}_{filename}"
+        folder_path = join(dirname(realpath(__file__)), 'files/')
+        os.makedirs(folder_path, exist_ok=True)
+        folder_path = join(folder_path, folder_name)
+        os.makedirs(folder_path, exist_ok=True)
+        file_destination = os.path.join(folder_path, filename)
+        
         if 'b' in encoded_file[0]:
             msg = encoded_file[2:-1]
 
@@ -448,7 +489,7 @@ class Chat:
         else:
             tail = encoded_file.split()
         
-        return {'status': 'OK', 'message': 'File Sent'}
+        return {'status': 'OK', 'message': 'File Sent', 'address': file_destination}
 
     def send_group_file(self, sessionid, username_from, groupname, filepath, encoded_file):
         if (sessionid not in self.sessions):
@@ -505,8 +546,7 @@ class Chat:
             else:
                 tail = encoded_file.split()
         
-        return {'status': 'OK', 'message': 'File Sent'}
-
+        return {'status': 'OK', 'message': 'File Sent', 'address': file_destination }
 
 #   ===================== Komunikasi dengan server lain =====================
     def add_realm(self, realm_id, realm_dest_address, realm_dest_port, data):
