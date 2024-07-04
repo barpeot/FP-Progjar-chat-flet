@@ -49,6 +49,11 @@ class Chat:
         self.sessions={}
         self.users = {}
         self.group = {}
+        self.group['new']={
+                'admin': 'messi',
+                'members': ['messi', 'lineker', 'henderson'],
+                'message':{}
+            }
         self.users['messi']={ 'nama': 'Lionel Messi', 'negara': 'Argentina', 'password': 'surabaya', 'incoming' : {}, 'outgoing': {}}
         self.users['henderson']={ 'nama': 'Jordan Henderson', 'negara': 'Inggris', 'password': 'surabaya', 'incoming': {}, 'outgoing': {}}
         self.users['lineker']={ 'nama': 'Gary Lineker', 'negara': 'Inggris', 'password': 'surabaya','incoming': {}, 'outgoing':{}}
@@ -124,11 +129,11 @@ class Chat:
                 return self.get_privateinbox(username, usernamefrom)
             elif (command=='groupinbox'):
                 sessionid = j[1].strip()
-                usernamefrom = ""
-                usernamefrom = j[2].strip()
-                group_name = self.sessions[sessionid]['group_name']
-                logging.warning("INBOX: {} {}" . format(sessionid, usernamefrom))
-                return self.get_groupinbox(group_name, usernamefrom)
+                groupname = ""
+                groupname = j[2].strip()
+                username = self.sessions[sessionid]['username']
+                logging.warning("INBOX: {} {} {}" . format(sessionid, groupname, username))
+                return self.get_groupinbox(groupname, username)
             elif (command=='sendfile'):
                 sessionid = j[1].strip()
                 usernameto = j[2].strip()
@@ -372,25 +377,25 @@ class Chat:
             s_to = self.get_user(username_dest)
             if s_to is False:
                 continue
-            message = {'group': groupname,'msg_from': s_fr['nama'], 'msg_to': s_to['nama'], 'msg': message}
+            sent = {'group': groupname,'msg_from': s_fr['nama'], 'msg_to': s_to['nama'], 'msg': message}
             try:    
-                self.group[groupname]['message'][username_from].put(message)
+                self.group[groupname]['message'][username_from].put(sent)
             except KeyError:
                 self.group[groupname]['message'][username_from]=Queue()
-                self.group[groupname]['message'][username_from].put(message)
+                self.group[groupname]['message'][username_from].put(sent)
             
             outqueue_sender = s_fr['outgoing']
             inqueue_receiver = s_to['incoming']
             try:    
-                outqueue_sender[username_from].put(message)
+                outqueue_sender[username_from].put(sent)
             except KeyError:
                 outqueue_sender[username_from]=Queue()
-                outqueue_sender[username_from].put(message)
+                outqueue_sender[username_from].put(sent)
             try:
-                inqueue_receiver[username_from].put(message)
+                inqueue_receiver[username_from].put(sent)
             except KeyError:
                 inqueue_receiver[username_from]=Queue()
-                inqueue_receiver[username_from].put(message)
+                inqueue_receiver[username_from].put(sent)
         return {'status': 'OK', 'message': 'Message Sent'}
     
     def get_inbox(self, username):
@@ -413,14 +418,30 @@ class Chat:
                 msgs[usernamefrom].append(s_fr['incoming'][usernamefrom].get_nowait())
         return {'status': 'OK', 'messages': msgs}
 
-    def get_groupinbox(self, group_name, usernamefrom=None):
-        s_fr = self.get_user(group_name)
+    def get_groupinbox(self, group_name, username):
+        s_fr = self.get_user(username)
+        print(s_fr)
         incoming = s_fr['incoming']
         msgs = {}
-        if usernamefrom in incoming:
-            msgs[usernamefrom] = []
-            while not incoming[usernamefrom].empty():
-                msgs[usernamefrom].append(s_fr['incoming'][usernamefrom].get_nowait())
+        for user in incoming:
+            print(user)
+            msgs[user] = []
+            unmatched_items = []
+            while not incoming[user].empty():
+                try:
+                    item = incoming[user].get_nowait()
+                    if 'group' in item and item['group'] == group_name:
+                        print(item)
+                        msgs[user].append(item)
+                    else:
+                        unmatched_items.append(item)
+                except queue.Empty:
+                    break
+    
+            # Put the unmatched items back into the queue
+            for unmatched_item in unmatched_items:
+                incoming[user].put(unmatched_item)
+
         return {'status': 'OK', 'messages': msgs}
 
     def send_file(self, sessionid, username_from, username_dest, filepath ,encoded_file):

@@ -87,6 +87,10 @@ class ChatClient:
                 username=""
                 username = j[1].strip()
                 return self.privateinbox(username)
+            elif (command=='groupinbox'):
+                groupname=""
+                groupname = j[1].strip()
+                return self.groupinbox(groupname)
             elif (command == 'getrealminbox'):
                 realmid = j[1].strip()
                 return self.realm_inbox(realmid)
@@ -290,6 +294,16 @@ class ChatClient:
         if (self.tokenid==""):
             return "Error, not authorized"
         string="privateinbox {} {} \r\n" . format(self.tokenid, username)
+        result = self.sendstring(string)
+        if result['status']=='OK':
+            return "{}" . format(json.dumps(result['messages']))
+        else:
+            return "Error, {}" . format(result['message'])
+
+    def groupinbox(self, groupname):
+        if (self.tokenid==""):
+            return "Error, not authorized"
+        string="groupinbox {} {} \r\n" . format(self.tokenid, groupname)
         result = self.sendstring(string)
         if result['status']=='OK':
             return "{}" . format(json.dumps(result['messages']))
