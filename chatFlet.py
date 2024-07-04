@@ -357,10 +357,10 @@ def main(page: ft.Page):
             for key in data:
                 for item in data[key]:
                     if 'msg' in item:
-                        new_message_widget = ft.Text("{} : {}".format(user, item['msg']))
+                        new_message_widget = ft.Text("{} : {}".format(item['msg_from'], item['msg']))
                         chat.controls.append(new_message_widget)
                     elif 'file_name' in item:
-                        new_item_widget = ft.Text("{} : sent {}".format(user, item['file_name']))
+                        new_item_widget = ft.Text("{} : sent {}".format(item['msg_from'], item['file_name']))
                         chat.controls.append(new_item_widget)
                         try:
                             image_bytes = item['file_content']
@@ -522,8 +522,8 @@ def main(page: ft.Page):
             page.update()
 
         def inbox(group_name):
-            user=group_name
-            rcvmsg = cc.proses("inbox {}" .format(user))
+            group=group_name
+            rcvmsg = cc.proses("groupinbox {}" .format(group))
             data = json.loads(rcvmsg)
 
             # # Extract the messages
@@ -533,10 +533,10 @@ def main(page: ft.Page):
             for key in data:
                 for item in data[key]:
                     if 'msg' in item:
-                        new_message_widget = ft.Text("{} : {}".format(user, item['msg']))
+                        new_message_widget = ft.Text("{} : {}".format(item['msg_from'], item['msg']))
                         chat.controls.append(new_message_widget)
                     elif 'file_name' in item:
-                        new_item_widget = ft.Text("{} : sent {}".format(user, item['file_name']))
+                        new_item_widget = ft.Text("{} : sent {}".format(item['msg_from'], item['file_name']))
                         chat.controls.append(new_item_widget)
                         try:
                             image_bytes = item['file_content']
@@ -571,7 +571,6 @@ def main(page: ft.Page):
                 new_message_widget = ft.Text("{} : {}".format(user_logged_in, message_text))
                 cc.proses("sendgroup {} {}".format(group_name, message_text))
                 # Append the new message to the ListView
-                chat.controls.append(new_message_widget)
                 
                 # Clear the text field
                 new_message.value = ""
