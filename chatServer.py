@@ -290,7 +290,7 @@ class Chat:
         if (group_name not in self.group):
             return False
         return self.group[group_name]
-    
+
     def get_user(self,username):
         if (username not in self.users):
             return False
@@ -568,6 +568,7 @@ class Chat:
                 tail = encoded_file.split()
         
         return {'status': 'OK', 'message': 'File Sent', 'address': file_destination }
+
 
 #   ===================== Komunikasi dengan server lain =====================
     def add_realm(self, realm_id, realm_dest_address, realm_dest_port, data):
