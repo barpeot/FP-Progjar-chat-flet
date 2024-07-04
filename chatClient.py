@@ -197,7 +197,7 @@ class ChatClient:
 
         result = self.sendstring(string)
         if result['status']=='OK':
-            return "file sent to {}" . format(usernameto)
+            return "{}" . format(result['address'])
         else:
             return "Error, {}" . format(result['message'])
 

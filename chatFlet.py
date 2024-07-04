@@ -413,6 +413,21 @@ def main(page: ft.Page):
             close_dialog(dialog)
             new_message_widget = ft.Text("{} : sent {}".format(user_logged_in, file))
             chat.controls.append(new_message_widget)
+            
+            filepath = rcvmsg
+            
+            
+            try:
+                image = ft.Image(
+                    src=filepath,
+                    width=100,
+                    height=100,
+                    fit=ft.ImageFit.CONTAIN,
+                )
+                chat.controls.append(image)
+            except Exception as e:
+                print(f"Error decoding file content: {e}")
+            
             chat.update()
             page.update()
     

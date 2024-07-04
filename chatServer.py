@@ -467,7 +467,7 @@ class Chat:
         else:
             tail = encoded_file.split()
         
-        return {'status': 'OK', 'message': 'File Sent'}
+        return {'status': 'OK', 'message': 'File Sent', 'address': file_destination}
 
     def send_group_file(self, sessionid, username_from, groupname, filepath, encoded_file):
         if (sessionid not in self.sessions):
@@ -524,7 +524,7 @@ class Chat:
             else:
                 tail = encoded_file.split()
         
-        return {'status': 'OK', 'message': 'File Sent'}
+        return {'status': 'OK', 'message': 'File Sent', 'address': file_destination }
 
 
 #   ===================== Komunikasi dengan server lain =====================
